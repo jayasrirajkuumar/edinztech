@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { Input, TextArea } from '../ui/Input';
 import Select from '../ui/Select';
 import Button from '../ui/Button';
-import { Icons } from '../icons';
+import { Icons } from '../icons/index';
 import { createProgram, uploadProgramTemplate } from '../../lib/api';
 import { useNavigate } from 'react-router-dom';
 

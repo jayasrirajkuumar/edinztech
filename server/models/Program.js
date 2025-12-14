@@ -53,9 +53,9 @@ const programSchema = mongoose.Schema({
         },
         date: {
             show: { type: Boolean, default: true },
-            x: { type: Number, default: 80 },
-            y: { type: Number, default: 80 },
-            fontSize: { type: Number, default: 20 },
+            x: { type: Number, default: 75 }, // Adjusted for signature area
+            y: { type: Number, default: 78 }, // Adjusted for signature line
+            fontSize: { type: Number, default: 16 },
             color: { type: String, default: '#555555' }
         },
         qr: {
