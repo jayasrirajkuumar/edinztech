@@ -101,6 +101,7 @@ const inviteStudent = async (req, res) => {
 
 const getEnrollments = async (req, res) => {
     try {
+        console.log('[DEBUG] getEnrollments called'); // Debug Log
         const { type, programId, search } = req.query;
 
         let query = {};
@@ -115,6 +116,8 @@ const getEnrollments = async (req, res) => {
             query.programId = programId;
         }
 
+        console.log('[DEBUG] Query:', query); // Debug Log
+
         // Fetch Enrollments with populated data
         // We need deep population: user, program, and payment info
         const enrollments = await Enrollment.find(query)
@@ -122,6 +125,32 @@ const getEnrollments = async (req, res) => {
             .populate('program', 'title type fee')
             .populate('paymentId', 'amount status')
             .sort({ createdAt: -1 });
+
+        console.log(`[DEBUG] Found ${enrollments.length} enrollments`); // Debug Log
+
+        // Auto-fix: Check for missing userCodes and generate them on the fly
+        // This ensures the table never shows N/A for valid users
+        const updates = [];
+        try {
+            for (const enrollment of enrollments) {
+                if (enrollment.user && !enrollment.user.userCode) {
+                    // Generate code
+                    if (!enrollment.user.userCode) {
+                        // WARNING: saving a partial document (populated with select) can be risky.
+                        // Skipping save for reliability during debug.
+                        // enrollment.user.userCode = generateUserCode();
+                        // updates.push(enrollment.user.save());
+                        console.warn(`[DEBUG] Skipping auto-fix for user ${enrollment.user._id} due to partial doc risk.`);
+                    }
+                }
+            }
+            if (updates.length > 0) {
+                await Promise.all(updates);
+                console.log(`[Admin] Backfilled userCodes for ${updates.length} users in enrollment list.`);
+            }
+        } catch (autoFixError) {
+            console.error('[DEBUG] Auto-fix failed:', autoFixError);
+        }
 
         // Search Logic (Done in memory for simplicity/performance on populated fields)
         let results = enrollments;

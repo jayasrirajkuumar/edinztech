@@ -5,6 +5,9 @@ import AdminLayout from '../layouts/AdminLayout';
 
 // Public Pages
 import Home from '../pages/Home';
+import About from '../pages/About';
+import Services from '../pages/Services';
+import Contact from '../pages/Contact';
 import Courses from '../pages/Courses';
 import CourseDetails from '../pages/CourseDetails';
 import Internships from '../pages/Internships';
@@ -14,6 +17,9 @@ import WorkshopDetails from '../pages/WorkshopDetails';
 import Verify from '../pages/Verify';
 import Login from '../pages/Login';
 import Success from '../pages/Success';
+
+// Auth Components
+import ProtectedRoute from '../components/auth/ProtectedRoute';
 
 // Dashboard Pages
 import Dashboard from '../pages/Dashboard';
@@ -40,14 +46,15 @@ import AdminTemplateOfferLetter from '../pages/admin/templates/offer-letter';
 import AdminInvitePage from '../pages/admin/invite';
 import AdminEnrollments from '../pages/AdminEnrollments';
 
-import ProtectedRoute from '../components/auth/ProtectedRoute';
-
 export const router = createBrowserRouter([
     {
         path: '/',
         element: <PublicLayout />,
         children: [
             { path: '/', element: <Home /> },
+            { path: '/about', element: <About /> },
+            { path: '/services', element: <Services /> },
+            { path: '/contact', element: <Contact /> },
             { path: '/courses', element: <Courses /> },
             { path: '/internships', element: <Internships /> },
             { path: '/workshops', element: <Workshops /> },
@@ -55,6 +62,7 @@ export const router = createBrowserRouter([
             { path: '/verify', element: <Verify /> },
             { path: '/login', element: <Login /> },
             { path: '/success', element: <Success /> },
+            { path: '*', element: <div className="p-20 text-center text-xl">Page Not Found (Custom Catch-All)</div> },
         ],
     },
     {
