@@ -208,6 +208,12 @@ const handleWebhook = asyncHandler(async (req, res) => {
                     console.log(`[Webhook] Created new user: ${userEmail} (${userCode})`);
                 } else {
                     console.log(`[Webhook] Found existing user: ${userEmail}`);
+                    // Backfill userCode if missing (Migration for old users)
+                    if (!user.userCode) {
+                        user.userCode = generateUserCode();
+                        await user.save();
+                        console.log(`[Webhook] Backfilled userCode for: ${userEmail}`);
+                    }
                 }
 
                 // 2. Create Payment Record (Idempotency Check)

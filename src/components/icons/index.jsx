@@ -11,6 +11,7 @@ import {
     LogIn,
     LogOut,
     ChevronRight,
+    ChevronDown, // Added
     Menu,
     X,
     Rocket,
@@ -28,7 +29,9 @@ import {
     UserPlus,
     MessageSquare,
     BarChart,
-    Settings,
+    Dot,
+    User, // Added
+    LayoutDashboard // Added
 } from 'lucide-react';
 
 export const Icons = {
@@ -39,14 +42,17 @@ export const Icons = {
     Courses: (props) => <BookOpen className="text-secondary" {...props} />,
     Internships: (props) => <Briefcase className="text-secondary" {...props} />,
     Workshops: (props) => <Users className="text-secondary" {...props} />,
+    Users: (props) => <Users className="text-secondary" {...props} />,
     Verify: (props) => <ShieldCheck className="text-secondary" {...props} />,
     Login: (props) => <LogIn className="text-secondary" {...props} />,
     Logout: (props) => <LogOut className="text-secondary" {...props} />,
+    LogOut: (props) => <LogOut className="text-secondary" {...props} />, // Added alias
 
     // UI Controls
     Menu: (props) => <Menu className="text-primary" {...props} />,
     Close: (props) => <X className="text-primary" {...props} />,
     ChevronRight: (props) => <ChevronRight className="text-gray-400" {...props} />,
+    ChevronDown: (props) => <ChevronDown className="text-gray-400" {...props} />, // Added
     Search: (props) => <Search className="text-gray-400" {...props} />,
     Plus: (props) => <Plus className="text-primary" {...props} />,
     Filter: (props) => <Filter className="text-secondary" {...props} />,
@@ -54,7 +60,6 @@ export const Icons = {
     Edit: (props) => <Edit className="text-blue-600" {...props} />,
     Trash: (props) => <Trash2 className="text-danger" {...props} />,
     Dot: (props) => <Dot {...props} />,
-    Settings: (props) => <Settings className="text-secondary" {...props} />,
 
     // Communication
     Mail: (props) => <Mail className="text-secondary" {...props} />,
@@ -76,4 +81,6 @@ export const Icons = {
     Certificate: (props) => <Award className="text-primary" {...props} />,
     Quiz: (props) => <Rocket className="text-primary" {...props} />,
     Upload: (props) => <Upload className="text-primary" {...props} />,
+    User: (props) => <User className="text-primary" {...props} />, // Added
+    Dashboard: (props) => <LayoutDashboard className="text-primary" {...props} />, // Added
 };

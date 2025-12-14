@@ -1,7 +1,7 @@
 const eventBus = require('./eventBus');
 const certificateService = require('../services/certificateGenerator');
 const emailService = require('../services/emailService');
-const Certificate = require('../models/Certificate');
+// const Certificate = require('../models/Certificate'); // Disabled
 const Enrollment = require('../models/Enrollment');
 const { v4: uuidv4 } = require('uuid');
 
@@ -17,7 +17,7 @@ eventBus.on('USER_ENROLLED', async ({ user, program, enrollment }) => {
         <p>Your journey starts now!</p>
         ${program.whatsappGroupLink ? `<p>Join our WhatsApp Group: <a href="${program.whatsappGroupLink}">Click Here</a></p>` : ''}
     `;
-    await emailService.sendEmail(user.email, subject, html);
+    await emailService.sendEmail({ to: user.email, subject, html });
 
     // 2. Mock WhatsApp (Log only)
     if (program.whatsappMessage) {
@@ -44,15 +44,22 @@ eventBus.on('PROGRAM_COMPLETED', async ({ user, programId, quizAttempt }) => {
         const Program = require('../models/Program'); // Lazy load
         const program = await Program.findById(programId);
 
+        const certificateCode = `CERT-${uuidv4().substring(0, 8).toUpperCase()}`;
+
+        // const { filePath } = await certificateService.generateCertificate(user, program, certificateCode);
         const { path: fileUrl, code: generatedCode } = await certificateService.generateCertificate(user, program);
 
-        // 2. Save Certificate Record
+
+        // 2. Save Certificate Record (DISABLED)
+        /*
         await Certificate.create({
             user: user._id,
             program: programId,
             certificateCode: generatedCode,
             fileUrl: fileUrl
         });
+        */
+        console.log("Certificate generated but DB save disabled as model missing:", generatedCode);
 
         // 3. Update Enrollment Status
         await Enrollment.findOneAndUpdate(
