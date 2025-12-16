@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Icons } from './icons';
+import logo from '../assets/logo.svg';
+import inspire from '../assets/inspire.svg';
 
 const NavItem = ({ to, children, icon: Icon }) => (
     <NavLink
@@ -15,9 +17,10 @@ const NavItem = ({ to, children, icon: Icon }) => (
     </NavLink>
 );
 
-export default function Navbar() {
+export default function Navbar({ hideNavigation = false }) {
     const [user, setUser] = useState(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const navigate = useNavigate();
     const dropdownRef = useRef(null);
 
@@ -56,24 +59,47 @@ export default function Navbar() {
 
     return (
         <nav className="w-full bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex items-center">
-                        <Link to="/" className="text-2xl font-bold text-secondary flex items-center gap-2">
-                            <Icons.Rocket size={28} className="text-primary" />
-                            <span>Edinz<span className="text-primary">Tech</span></span>
+            <div className="w-full px-4 sm:px-6 lg:px-12">
+                <div className="flex justify-between h-20">
+                    <div className="flex items-center gap-6">
+                        <Link to="/" className="flex items-center gap-2">
+                            <img src={logo} alt="EdinzTech" className="h-16" />
                         </Link>
+                        {hideNavigation && (
+                            <span className="hidden lg:block text-xl font-bold text-gray-700">
+                                Welcome to Student Dashboard
+                            </span>
+                        )}
                     </div>
-                    <div className="hidden md:flex space-x-4 items-center">
-                        <NavItem to="/" icon={Icons.Home}>Home</NavItem>
-                        <NavItem to="/about" icon={Icons.Users}>About Us</NavItem>
-                        <NavItem to="/services" icon={Icons.Rocket}>Services</NavItem>
-                        <NavItem to="/courses" icon={Icons.Courses}>Courses</NavItem>
-                        <NavItem to="/internships" icon={Icons.Internships}>Internships</NavItem>
-                        <NavItem to="/workshops" icon={Icons.Workshops}>Workshops</NavItem>
-                        <NavItem to="/contact" icon={Icons.Home}>Contact Us</NavItem>
 
-                        <div className="ml-4 pl-4 border-l border-gray-200 relative" ref={dropdownRef}>
+                    {/* Mobile menu button */}
+                    <div className="flex items-center md:hidden gap-4">
+                        <div className="border-l border-gray-200 h-8 flex items-center pl-4">
+                            <img src={inspire} alt="Inspire" className="h-10" />
+                        </div>
+                        <button
+                            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                            className="text-gray-500 hover:text-primary focus:outline-none"
+                        >
+                            <Icons.Menu size={24} />
+                        </button>
+                    </div>
+
+                    {/* Desktop Menu */}
+                    <div className="hidden md:flex gap-8 items-center">
+                        {!hideNavigation && (
+                            <>
+                                <NavItem to="/" icon={Icons.Home}>Home</NavItem>
+                                <NavItem to="/about" icon={Icons.Users}>About Us</NavItem>
+                                <NavItem to="/services" icon={Icons.Rocket}>Services</NavItem>
+                                <NavItem to="/courses" icon={Icons.Courses}>Courses</NavItem>
+                                <NavItem to="/internships" icon={Icons.Internships}>Internships</NavItem>
+                                <NavItem to="/workshops" icon={Icons.Workshops}>Workshops</NavItem>
+                                <NavItem to="/contact" icon={Icons.Home}>Contact Us</NavItem>
+                            </>
+                        )}
+
+                        <div className={`relative ${!hideNavigation ? 'ml-4 pl-4 border-l border-gray-200' : ''}`} ref={dropdownRef}>
                             {user ? (
                                 <div>
                                     <button
@@ -85,7 +111,6 @@ export default function Navbar() {
                                         </div>
                                         <div className="flex flex-col items-start">
                                             <span className="leading-none">{user.name || 'User'}</span>
-                                            {/* <span className="text-xs text-gray-500">Student</span> */}
                                         </div>
                                         <Icons.ChevronDown size={16} className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                                     </button>
@@ -139,9 +164,93 @@ export default function Navbar() {
                                 </Link>
                             )}
                         </div>
+
+                        {hideNavigation && (
+                            <div className="ml-4 pl-4 border-l border-gray-200">
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('If you go back to the website, your account will be logged out. Are you sure?')) {
+                                            localStorage.removeItem('userInfo');
+                                            setUser(null);
+                                            navigate('/');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 rounded-full hover:bg-primary/20 transition-colors"
+                                >
+                                    <Icons.ArrowLeft size={16} />
+                                    Back to Website
+                                </button>
+                            </div>
+                        )}
+                        <div className="ml-4 pl-4 border-l border-gray-200 h-10 flex items-center">
+                            <img src={inspire} alt="Inspire" className="h-12" />
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Mobile Menu */}
+            {isMobileMenuOpen && (
+                <div className="md:hidden border-t border-gray-100 bg-white">
+                    <div className="px-4 pt-2 pb-4 space-y-1 flex flex-col">
+                        {!hideNavigation ? (
+                            <>
+                                <NavItem to="/" icon={Icons.Home}>Home</NavItem>
+                                <NavItem to="/about" icon={Icons.Users}>About Us</NavItem>
+                                <NavItem to="/services" icon={Icons.Rocket}>Services</NavItem>
+                                <NavItem to="/courses" icon={Icons.Courses}>Courses</NavItem>
+                                <NavItem to="/internships" icon={Icons.Internships}>Internships</NavItem>
+                                <NavItem to="/workshops" icon={Icons.Workshops}>Workshops</NavItem>
+                                <NavItem to="/contact" icon={Icons.Home}>Contact Us</NavItem>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => {
+                                    if (window.confirm('If you go back to the website, your account will be logged out. Are you sure?')) {
+                                        localStorage.removeItem('userInfo');
+                                        setUser(null);
+                                        navigate('/');
+                                    }
+                                }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/5 rounded-lg mb-2"
+                            >
+                                <Icons.ArrowLeft size={18} />
+                                Back to Website
+                            </button>
+                        )}
+
+                        <div className="border-t border-gray-100 mt-2 pt-2">
+                            {user ? (
+                                <>
+                                    <div className="px-3 py-2">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                <Icons.User size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                                                <p className="text-xs text-gray-500">{user.email}</p>
+                                            </div>
+                                        </div>
+                                        <Link to="/dashboard" className="block px-3 py-2 text-sm text-gray-700 hover:text-primary">Dashboard</Link>
+                                        <Link to="/dashboard/courses" className="block px-3 py-2 text-sm text-gray-700 hover:text-primary">My Courses</Link>
+                                        <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:text-red-700">Logout</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="px-3 py-2">
+                                    <Link to="/login">
+                                        <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-orange-600 transition-colors shadow-sm font-medium">
+                                            <Icons.Login size={18} className="text-white" />
+                                            Login
+                                        </button>
+                                    </Link>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 }

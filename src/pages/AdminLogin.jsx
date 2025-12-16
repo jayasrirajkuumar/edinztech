@@ -6,6 +6,7 @@ import { Icons } from '../components/icons';
 import Button from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import Card from '../components/ui/Card';
+import logo from '../assets/logo.svg';
 
 const loginSchema = z.object({
     email: z.string().min(1, 'Email is required').email('Invalid email address'),
@@ -61,10 +62,7 @@ export default function AdminLogin() {
         <div className="min-h-screen bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-6">
-                    <div className="flex items-center gap-2">
-                        <Icons.ShieldCheck size={40} className="text-primary" />
-                        <span className="text-3xl font-bold text-white">Edinz<span className="text-primary">Tech</span></span>
-                    </div>
+                    <img src={logo} alt="EdinzTech" className="h-12" />
                 </div>
                 <h2 className="mt-2 text-center text-2xl font-bold text-white tracking-tight">
                     Admin Portal Access

@@ -17,21 +17,39 @@ const SidebarItem = ({ to, icon: Icon, children, end }) => (
     </NavLink>
 );
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ isOpen, onClose }) {
     return (
-        <aside className="w-64 bg-white rounded-xl shadow-sm border border-gray-100 min-h-[calc(100vh-8rem)] p-6 hidden lg:block sticky top-24 self-start">
-            <div className="mb-6 pb-4 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-accent px-2">Student Portal</h2>
-            </div>
-            <nav>
-                <SidebarItem to="/dashboard" end icon={Icons.Home}>Overview</SidebarItem>
-                <SidebarItem to="/dashboard/courses" icon={Icons.Courses}>My Courses</SidebarItem>
-                <SidebarItem to="/dashboard/internships" icon={Icons.Internships}>Internships</SidebarItem>
-                <SidebarItem to="/dashboard/workshops" icon={Icons.Workshops}>Workshops</SidebarItem>
-                <SidebarItem to="/dashboard/certificates" icon={Icons.Certificate}>Certificates</SidebarItem>
-                <SidebarItem to="/dashboard/quizzes" icon={Icons.Quiz}>Quizzes</SidebarItem>
-                <SidebarItem to="/dashboard/feedbacks" icon={Icons.MessageSquare}>Feedbacks</SidebarItem>
-            </nav>
-        </aside>
+        <>
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                    onClick={onClose}
+                />
+            )}
+
+            <aside className={`
+                bg-white rounded-xl shadow-sm border border-gray-100 p-6 
+                fixed lg:sticky top-20 lg:top-24 left-0 z-40 h-[calc(100vh-5rem)] lg:h-auto lg:min-h-[calc(100vh-8rem)] 
+                w-64 transform transition-transform duration-300 ease-in-out lg:transform-none lg:block
+                ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
+                <div className="mb-6 pb-4 border-b border-gray-100 flex justify-between items-center">
+                    <h2 className="text-lg font-bold text-accent px-2">Student Portal</h2>
+                    <button onClick={onClose} className="lg:hidden text-gray-500 hover:text-gray-700">
+                        <Icons.X size={20} />
+                    </button>
+                </div>
+                <nav>
+                    <SidebarItem to="/dashboard" end icon={Icons.Home}>Overview</SidebarItem>
+                    <SidebarItem to="/dashboard/courses" icon={Icons.Courses}>My Courses</SidebarItem>
+                    <SidebarItem to="/dashboard/internships" icon={Icons.Internships}>Internships</SidebarItem>
+                    <SidebarItem to="/dashboard/workshops" icon={Icons.Workshops}>Workshops</SidebarItem>
+                    <SidebarItem to="/dashboard/certificates" icon={Icons.Certificate}>Certificates</SidebarItem>
+                    <SidebarItem to="/dashboard/quizzes" icon={Icons.Quiz}>Quizzes</SidebarItem>
+                    <SidebarItem to="/dashboard/feedbacks" icon={Icons.MessageSquare}>Feedbacks</SidebarItem>
+                </nav>
+            </aside>
+        </>
     );
 }
