@@ -7,12 +7,18 @@ import { Input } from '../components/ui/Input';
 import api, { publishCertificates, publishOfferLetters, exportPrograms, toggleProgramFeedback } from '../lib/api'; // Added toggleProgramFeedback
 import AdminTable from '../components/AdminTable'; // Keep AdminTable import as it's used in JSX
 
+import PublishResultsModal from '../components/PublishResultsModal'; // Import Modal
+
 export default function AdminPrograms() {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('All');
     const [programs, setPrograms] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Modal State
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [publishResults, setPublishResults] = useState(null);
 
     // Debounce search
     useEffect(() => {
@@ -61,7 +67,9 @@ export default function AdminPrograms() {
 
         try {
             const res = await publishCertificates(programId);
-            alert(res.message);
+            // Replace alert with Modal
+            setPublishResults(res);
+            setIsPublishModalOpen(true);
         } catch (err) {
             console.error("Failed to publish certificates", err);
             alert(err.response?.data?.message || 'Failed to publish certificates');
@@ -71,9 +79,16 @@ export default function AdminPrograms() {
     const handlePublishOfferLetter = async (programId, title) => {
         if (!window.confirm(`Are you sure you want to publish Offer Letters for "${title}"?`)) return;
 
+        // Ask if they want to force regenerate (useful for debugging/updates)
+        const force = window.confirm("Do you want to REGENERATE existing offer letters? (Click Cancel to skip existing)");
+
         try {
-            const res = await publishOfferLetters(programId);
-            alert(res.message);
+            const res = await publishOfferLetters(programId, force);
+            let msg = `${res.message} (Regen: ${force})`;
+            if (res.failures && res.failures.length > 0) {
+                msg += `\n\nFailures:\n${res.failures.join('\n')}`;
+            }
+            alert(msg);
         } catch (err) {
             console.error("Failed to publish offer letters", err);
             alert(err.response?.data?.message || 'Failed to publish offer letters');
@@ -178,67 +193,120 @@ export default function AdminPrograms() {
                 </div>
             </div>
 
-            <AdminTable headers={['Program Name', 'Category', 'Price', 'Enrolled', 'Status', 'Actions']}>
-                {programs.map(program => (
-                    <tr key={program._id || program.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-6 py-4">
-                            <div className="font-medium text-secondary">{program.title}</div>
-                            <div className="text-xs text-text-light">
-                                {new Date(program.startDate).toLocaleDateString()} - {new Date(program.endDate).toLocaleDateString()} • {program.mode}
-                            </div>
-                        </td>
-                        <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded text-xs font-semibold ${program.type === 'Course' ? 'bg-blue-50 text-blue-600' :
-                                program.type === 'Internship' ? 'bg-purple-50 text-purple-600' :
-                                    'bg-orange-50 text-orange-600'
-                                }`}>
-                                {program.type}
-                            </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-text-light">
-                            {program.paymentMode === 'Paid' ? `₹${program.fee}` : program.paymentMode}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-text-light">{program.enrolledCount || 0}</td>
-                        <td className="px-6 py-4">
-                            <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full w-fit">
-                                <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span> Active
-                            </span>
-                        </td>
-                        <td className="px-6 py-4">
-                            <div className="flex gap-2">
-                                <Link to={`/admin/programs/${program._id || program.id}/edit`}>
-                                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Icons.Edit size={18} /></button>
-                                </Link>
-                                <button className="p-1 text-red-500 hover:bg-red-50 rounded"><Icons.Trash size={18} /></button>
-                                <button
-                                    onClick={() => handlePublishCertificate(program._id || program.id, program.title)}
-                                    className="p-1 text-yellow-600 hover:bg-yellow-50 rounded"
-                                    title="Publish Certificates"
-                                >
-                                    <Icons.Award size={18} />
-                                </button>
-                                <button
-                                    onClick={() => handleToggleFeedback(program)}
-                                    className={`p-1.5 rounded-md transition-all duration-200 ${program.isFeedbackEnabled
-                                        ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-200'
-                                        : 'text-gray-400 hover:bg-gray-100'
-                                        }`}
-                                    title={program.isFeedbackEnabled ? "Feedback Enabled (Click to disable)" : "Feedback Disabled (Click to enable)"}
-                                >
-                                    {program.isFeedbackEnabled ? <Icons.MessageCircle size={18} /> : <Icons.MessageSquare size={18} />}
-                                </button>
-                                <button
-                                    onClick={() => handlePublishOfferLetter(program._id || program.id, program.title)}
-                                    className="p-1 text-purple-600 hover:bg-purple-50 rounded"
-                                    title="Publish Offer Letters"
-                                >
-                                    <Icons.FileText size={18} />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                ))}
+            <AdminTable headers={['Program Name', 'Category', 'Price', 'Enrolled', 'Cert Status', 'Offer Status', 'Actions']}>
+                {programs.map(program => {
+                    // Certificate Status Logic
+                    const totalEnrollments = program.enrolledCount || 0;
+                    const publishedCount = program.publishedCertificatesCount || 0;
+                    let certStatusBadge;
+
+                    if (totalEnrollments === 0) {
+                        certStatusBadge = <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">No Enrollments</span>;
+                    } else if (publishedCount === 0) {
+                        certStatusBadge = <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Yet to Publish</span>;
+                    } else if (publishedCount < totalEnrollments) {
+                        certStatusBadge = <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Partially Published</span>;
+                    } else {
+                        certStatusBadge = <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Certificates Published</span>;
+                    }
+
+                    // Disable Publish Button Logic
+                    const isPublishDisabled = totalEnrollments > 0 && publishedCount === totalEnrollments;
+
+                    return (
+                        <tr key={program._id || program.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                                <div className="font-medium text-secondary">{program.title}</div>
+                                <div className="text-xs text-text-light">
+                                    {new Date(program.startDate).toLocaleDateString()} - {new Date(program.endDate).toLocaleDateString()} • {program.mode}
+                                </div>
+                            </td>
+                            <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded text-xs font-semibold ${program.type === 'Course' ? 'bg-blue-50 text-blue-600' :
+                                    program.type === 'Internship' ? 'bg-purple-50 text-purple-600' :
+                                        'bg-orange-50 text-orange-600'
+                                    }`}>
+                                    {program.type}
+                                </span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-text-light">
+                                {program.paymentMode === 'Paid' ? `₹${program.fee}` : program.paymentMode}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-text-light">{totalEnrollments}</td>
+
+                            {/* Certificate Status Column */}
+                            <td className="px-6 py-4">
+                                {certStatusBadge}
+                            </td>
+
+                            {/* Offer Letter Status Column (Internship Only) */}
+                            <td className="px-6 py-4">
+                                {program.type === 'Internship' ? (
+                                    (program.issuedOfferLettersCount || 0) > 0 ? (
+                                        <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Issued</span>
+                                    ) : (
+                                        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-full">Not Issued</span>
+                                    )
+                                ) : (
+                                    <span className="text-gray-300">-</span>
+                                )}
+                            </td>
+
+                            <td className="px-6 py-4">
+                                <div className="flex gap-2">
+                                    <Link to={`/admin/programs/${program._id || program.id}/edit`}>
+                                        <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100" title="Edit Program">
+                                            <Icons.Edit size={14} /> Edit
+                                        </button>
+                                    </Link>
+                                    <button className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-red-700 bg-red-50 border border-red-200 hover:bg-red-100" title="Delete Program">
+                                        <Icons.Trash size={14} /> Delete
+                                    </button>
+
+                                    {/* Certificate Publish Action */}
+                                    <button
+                                        onClick={() => !isPublishDisabled && handlePublishCertificate(program._id || program.id, program.title)}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${isPublishDisabled || totalEnrollments === 0 ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-yellow-700 bg-yellow-50 border-yellow-200 hover:bg-yellow-100'}`}
+                                        title={isPublishDisabled ? "All certificates already published" : "Publish Certificates"}
+                                        disabled={isPublishDisabled || totalEnrollments === 0}
+                                    >
+                                        <Icons.Award size={14} /> Cert
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleToggleFeedback(program)}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border transition-all duration-200 ${program.isFeedbackEnabled
+                                            ? 'bg-purple-600 text-white border-purple-600'
+                                            : 'text-gray-500 bg-white border-gray-200 hover:bg-gray-50'
+                                            }`}
+                                        title={program.isFeedbackEnabled ? "Feedback Enabled (Click to disable)" : "Feedback Disabled (Click to enable)"}
+                                    >
+                                        {program.isFeedbackEnabled ? <Icons.MessageCircle size={14} /> : <Icons.MessageSquare size={14} />} Feedback
+                                    </button>
+
+                                    {/* Offer Letter Action (Internship Only) */}
+                                    {program.type === 'Internship' && (
+                                        <button
+                                            onClick={() => handlePublishOfferLetter(program._id || program.id, program.title)}
+                                            className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100"
+                                            title="Publish Offer Letters"
+                                        >
+                                            <Icons.FileText size={14} /> Offer
+                                        </button>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    )
+                })}
             </AdminTable>
+
+            <PublishResultsModal
+                isOpen={isPublishModalOpen}
+                onClose={() => setIsPublishModalOpen(false)}
+                results={publishResults}
+            />
+
         </div>
     );
 }

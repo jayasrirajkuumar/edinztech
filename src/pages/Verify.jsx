@@ -28,7 +28,13 @@ export default function Verify() {
             const html5QrCode = new Html5Qrcode("reader");
             scannerRef.current = html5QrCode;
 
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = {
+                fps: 15, // Smooth scanning
+                qrbox: { width: 300, height: 300 }, // Larger scanning area
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
+            };
 
             // Auto-start camera
             html5QrCode.start(
@@ -38,7 +44,7 @@ export default function Verify() {
                 onScanFailure
             ).catch(err => {
                 console.error("Error starting scanner", err);
-                setError("Camera access denied or device not found. Please ensure you are on HTTPS or localhost and have granted permissions.");
+                setError("Camera access denied. Please ensure you are on HTTPS/localhost and grant permissions.");
                 setShowScanner(false);
             });
         }
@@ -71,34 +77,48 @@ export default function Verify() {
         console.log("Scanned:", decodedText);
 
         // 1. Check for URL format (e.g. http://.../verify?id=EDZ-...)
-        if (decodedText.includes('verify?id=')) {
+        // 1. Check for URL format (e.g. http://.../verify?id=EDZ-...)
+        if (decodedText.includes('/verify')) {
             try {
                 // Try parsing as URL first
-                const urlObj = new URL(decodedText);
-                const certId = urlObj.searchParams.get('id');
+                let certId = null;
+                if (decodedText.startsWith('http')) {
+                    const urlObj = new URL(decodedText);
+                    certId = urlObj.searchParams.get('id') || urlObj.searchParams.get('certificateId');
+                }
+
+                // Fallback for simple string if URL parsing fails or partial
+                if (!certId) {
+                    if (decodedText.includes('id=')) certId = decodedText.split('id=')[1].split('&')[0];
+                    else if (decodedText.includes('certificateId=')) certId = decodedText.split('certificateId=')[1].split('&')[0];
+                }
+
                 if (certId) {
                     setCode(certId);
-                    handleVerifyNewArch(certId);
+                    // Decide which handler to use based on prefix
+                    if (certId.startsWith('EDZ-')) {
+                        handleVerifyNewArch(certId);
+                    } else {
+                        // CERT- and ISS- and others -> Unified Handler
+                        handleVerify(certId);
+                    }
                     return;
                 }
             } catch (e) {
-                // Fallback: Simple string split if URL parsing fails (e.g. partial scan)
-                const parts = decodedText.split('verify?id=');
-                if (parts.length > 1) {
-                    const certId = parts[1].split('&')[0];
-                    setCode(certId);
-                    handleVerifyNewArch(certId);
-                    return;
-                }
+                console.error("QR Parse Error", e);
             }
         }
 
         // 2. New Architecture Strict QR Check (CERT: prefix)
+        // If it starts with CERT:, it might be legacy or new, safer to route to Unified if format matches CERT-
         if (decodedText.startsWith('CERT:')) {
             const certId = decodedText.replace('CERT:', '');
-            // Route to New API
             setCode(certId);
-            handleVerifyNewArch(certId);
+            if (certId.startsWith('EDZ-')) {
+                handleVerifyNewArch(certId);
+            } else {
+                handleVerify(certId);
+            }
             return;
         }
 
@@ -139,12 +159,14 @@ export default function Verify() {
 
         // Smart Routing
         const cleanInput = code.replace(/\s/g, '');
+        // EDZ- goes to Strict New Arch (Certificate Collection Only)
+        // CERT- and ISS- go to Unified (Enrollment + Legacy Collection)
         if (cleanInput.startsWith('EDZ-')) {
             handleVerifyNewArch(cleanInput);
-        } else if (cleanInput.startsWith('ISS-')) {
-            handleVerify(cleanInput); // Old Logic
+        } else if (cleanInput.startsWith('ISS-') || cleanInput.startsWith('CERT-')) {
+            handleVerify(cleanInput);
         } else {
-            setError("Invalid Format. Please enter a valid ID starting with 'EDZ-' or 'ISS-'.");
+            setError("Invalid Format. Please enter a valid ID starting with 'CERT-', 'EDZ-' or 'ISS-'.");
         }
     };
 
@@ -156,8 +178,9 @@ export default function Verify() {
         setResult(null);
 
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            const response = await axios.get(`${apiUrl}/api/certificates/new-certificates/verify/${cleanId}`);
+            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+            const response = await axios.get(`${apiUrl}/certificates/new-certificates/verify/${cleanId}`);
 
             if (response.data.valid) {
                 setResult(response.data);
@@ -171,24 +194,39 @@ export default function Verify() {
         }
     };
 
+    const [debugInfo, setDebugInfo] = useState(null);
+
     const handleVerify = async (codeToVerify) => {
         if (!codeToVerify) return;
-        const cleanCode = codeToVerify.replace(/\s/g, ''); // Remove ALL spaces
+        const cleanCode = codeToVerify.replace(/[\s\u00A0]+/g, '').toUpperCase(); // Robust trim & Uppercase
         setLoading(true);
         setError(null);
         setResult(null);
+        setDebugInfo(null);
 
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || '';
-            const response = await axios.get(`${apiUrl}/api/certificates/verify/${codeToVerify}`);
+            const baseUrl = import.meta.env.VITE_API_URL || '';
+            const apiUrl = baseUrl.endsWith('/api') ? baseUrl : `${baseUrl}/api`;
+            const requestUrl = `${apiUrl}/certificates/verify/${cleanCode}`;
 
-            if (response.data.valid) {
+            // console.log("Calling API:", requestUrl);
+            const response = await axios.get(requestUrl);
+
+            // Fix: Check for 'status' (Legacy/Unified) OR 'valid' (New Arch compat)
+            if (response.data.status === 'VALID' || response.data.valid) {
                 setResult(response.data);
             } else {
                 setError(response.data.message || 'Invalid Certificate');
             }
         } catch (err) {
-            setError(err.response?.data?.message || err.message || "Network Error");
+            const errorMsg = err.response?.data?.message || err.message || "Network Error";
+            setError(errorMsg);
+            setDebugInfo({
+                url: `${import.meta.env.VITE_API_URL || ''}/api/certificates/verify/${cleanCode}`,
+                status: err.response?.status,
+                data: err.response?.data,
+                message: err.message
+            });
         } finally {
             setLoading(false);
         }
@@ -229,8 +267,12 @@ export default function Verify() {
                                     <span className="font-semibold text-gray-900 text-right max-w-[60%]">{result.programName || result.courseName}</span>
                                 </div>
                                 <div className="p-4 flex justify-between items-center">
-                                    <span className="text-gray-500 text-sm">Issue Date</span>
-                                    <span className="font-medium text-gray-900">{new Date(result.issueDate).toLocaleDateString()}</span>
+                                    <span className="text-gray-500 text-sm">Course Duration</span>
+                                    <span className="font-medium text-gray-900">
+                                        {result.courseStartDate && result.courseEndDate
+                                            ? `${new Date(result.courseStartDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} - ${new Date(result.courseEndDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`
+                                            : new Date(result.issueDate).toLocaleDateString()}
+                                    </span>
                                 </div>
                                 <div className="p-4 flex justify-between items-center">
                                     <span className="text-gray-500 text-sm">Certificate ID</span>
@@ -343,6 +385,16 @@ export default function Verify() {
                                         <Icons.XCircle className="w-6 h-6 text-red-600" />
                                     </div>
                                     <p className="text-red-600 font-medium">{error}</p>
+
+                                    {debugInfo && (
+                                        <div className="mt-4 p-3 bg-gray-100 rounded text-left text-xs font-mono text-gray-700 overflow-x-auto">
+                                            <p className="font-bold text-gray-900 mb-1">Debug Info:</p>
+                                            <p>URL: {debugInfo.url}</p>
+                                            <p>Status: {debugInfo.status}</p>
+                                            <p>Message: {debugInfo.message}</p>
+                                            <pre className="mt-1">{JSON.stringify(debugInfo.data, null, 2)}</pre>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>

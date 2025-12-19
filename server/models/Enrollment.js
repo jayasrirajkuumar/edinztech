@@ -46,6 +46,28 @@ const enrollmentSchema = mongoose.Schema({
     },
     completedAt: {
         type: Date
+    },
+
+    // MANDATORY CERTIFICATE LOGIC
+    certificateStatus: {
+        type: String,
+        enum: ["NOT_PUBLISHED", "PUBLISHED"],
+        default: "NOT_PUBLISHED"
+    },
+    certificateId: {
+        type: String,
+        default: null,
+        unique: true,
+        sparse: true // Allow multiple nulls
+    },
+    certificateIssuedAt: {
+        type: Date,
+        default: null
+    },
+    offerLetterStatus: {
+        type: String,
+        enum: ["NOT_ISSUED", "ISSUED"],
+        default: "NOT_ISSUED"
     }
 }, {
     timestamps: true

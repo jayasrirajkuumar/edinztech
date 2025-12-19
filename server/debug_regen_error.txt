@@ -1,0 +1,10 @@
+[2025-12-19T06:56:10.513Z] Starting regeneration for Enrollment: 694260b79e53c925801ebeff
+[2025-12-19T06:56:10.515Z] Certificate ID: CERT-EDZ-2025-COU-474-2025-289422
+[2025-12-19T06:56:10.577Z] QR Generated.
+[2025-12-19T06:56:10.578Z] Calling Service at: http://localhost:5002/api/generate
+[2025-12-19T06:56:10.691Z] Service Call Success.
+[2025-12-19T11:43:33.390Z] Starting regeneration for Enrollment: 69452abfc1585f2772b36cae
+[2025-12-19T11:43:33.392Z] Certificate ID: CERT-EDZ-2025-INT-553-2025-126240
+[2025-12-19T11:43:33.457Z] QR Generated.
+[2025-12-19T11:43:33.458Z] Calling Service at: http://localhost:5002/api/generate
+[2025-12-19T11:43:49.201Z] Service Call Success.

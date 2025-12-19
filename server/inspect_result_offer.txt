@@ -1,0 +1,6 @@
+Program Found: aigent (69402c4b0be5b3159a693edf)
+Total Enrollments: 3
+Total Offer Letters: 3
+- User: 69402cc10be5b3159a693eea | ID: OFFER-EDZ-2025-COU-271-3eea-1505 | Status: sent | Type: offer-letter
+- User: 693bf802ed29a0116cadafb6 | ID: OFFER-EDZ-2025-COU-271-afb6-1549 | Status: sent | Type: offer-letter
+- User: 6944d1b3749c8c51f4b8138b | ID: OFFER-EDZ-2025-COU-271-138b-1656 | Status: sent | Type: offer-letter

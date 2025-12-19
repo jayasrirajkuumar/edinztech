@@ -8,6 +8,15 @@ const certificateSchema = mongoose.Schema({
         unique: true,
         index: true
     },
+
+    // Generation Status
+    status: {
+        type: String,
+        enum: ['pending', 'generated', 'sent', 'failed'],
+        default: 'pending',
+        index: true
+    },
+
     qrCode: { type: String }, // Base64 QR Data URL (New Architecture)
 
     // Relationships

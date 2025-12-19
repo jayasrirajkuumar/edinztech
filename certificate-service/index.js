@@ -44,14 +44,19 @@ app.post('/api/generate', async (req, res) => {
         return res.status(400).json({ message: 'Missing required fields' });
     }
 
-    res.status(202).json({ message: 'Request accepted. Processing started.' });
-
-    processCertificate({ studentData, courseData, certificateId, callbackUrl, templateId, templateUrl, type, qrCode });
+    // SYNCHRONOUS PROCESSING (Atomic Requirement)
+    try {
+        await processCertificate({ studentData, courseData, certificateId, callbackUrl, templateId, templateUrl, type, qrCode });
+        res.status(200).json({ success: true, message: 'Certificate Generated & Sent' });
+    } catch (error) {
+        console.error("Generation Failed:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 });
 
 async function processCertificate({ studentData, courseData, certificateId, callbackUrl, templateId, templateUrl, type, qrCode }) {
     console.log(`[Processing] ${type || 'Certificate'}: ${certificateId} for ${studentData.name}`);
-    const filePath = path.join(tempDir, `${certificateId}.pdf`);
+    let filePath = path.join(tempDir, `${certificateId}.pdf`);
 
     try {
         const isOfferLetter = type === 'offer-letter';
@@ -86,11 +91,13 @@ async function processCertificate({ studentData, courseData, certificateId, call
         // B. Fallback to Local Defaults (Only if no user template found)
         if (!templatePath) {
             if (isOfferLetter) {
-                if (fs.existsSync(path.join(__dirname, 'templates', 'offer-letter.docx'))) {
+                // Priority: DOCX (Native Output)
+                if (fs.existsSync(path.join(__dirname, 'templates', 'offer-letter.png'))) {
+                    templatePath = path.join(__dirname, 'templates', 'offer-letter.png');
+                    isDocx = false;
+                } else if (fs.existsSync(path.join(__dirname, 'templates', 'offer-letter.docx'))) {
                     templatePath = path.join(__dirname, 'templates', 'offer-letter.docx');
                     isDocx = true;
-                } else {
-                    templatePath = path.join(__dirname, 'templates', 'offer-letter.png');
                 }
             } else {
                 templatePath = path.join(__dirname, 'templates', 'default.jpg');
@@ -174,12 +181,22 @@ async function processCertificate({ studentData, courseData, certificateId, call
             const doc = new Docxtemplater(zip, {
                 paragraphLoop: true,
                 linebreaks: true,
-                nullGetter: () => ""
+                nullGetter: () => "",
+                delimiters: { start: '[%', end: '%]' }
             });
 
             const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+            };
+
+            const companyName = "Inspire Softech Solutions";
+
             doc.render({
+                // Student Details
                 name: studentData.name,
                 registerNumber: studentData.registerNumber || '',
                 department: studentData.department || '',
@@ -188,10 +205,24 @@ async function processCertificate({ studentData, courseData, certificateId, call
                 pincode: studentData.pincode || '',
                 city: studentData.city || '',
                 state: studentData.state || '',
+
+                // Course/Internship Details
                 title: courseData.title,
-                startDate: courseData.startDate ? new Date(courseData.startDate).toLocaleDateString() : '',
-                endDate: courseData.endDate ? new Date(courseData.endDate).toLocaleDateString() : '',
+                internshipName: courseData.title, // Alias
+                courseName: courseData.title, // Alias
+
+                // Dates (DD/MM/YYYY)
+                startDate: formatDate(courseData.startDate),
+                endDate: formatDate(courseData.endDate),
+                Start_Date: formatDate(courseData.startDate), // Potential Template Alias
+                End_Date: formatDate(courseData.endDate), // Potential Template Alias
+
+                // Meta
                 today: today,
+                companyName: companyName, // Dynamic Company Name
+                Company_Name: companyName,
+
+                // Name Variations
                 Name: studentData.name,
                 NAME: studentData.name.toUpperCase()
             });
@@ -203,8 +234,9 @@ async function processCertificate({ studentData, courseData, certificateId, call
                 <html>
                     <head>
                         <style>
-                            @page { size: A4 portrait; margin: 2cm; }
-                            body { font-family: 'Times New Roman', serif; line-height: 1.5; font-size: 12pt; color: #000; }
+                            @page { size: A4 portrait; margin: 1cm; }
+                            body { font-family: 'Times New Roman', serif; line-height: 1.25; font-size: 11pt; color: #000; }
+                            p { margin-bottom: 8px; margin-top: 0; }
                             table { width: 100%; border-collapse: collapse; }
                             td, th { border: 1px solid #ddd; padding: 4px; }
                         </style>
@@ -270,7 +302,7 @@ async function processCertificate({ studentData, courseData, certificateId, call
                                 left: 0;
                                 width: 100%;
                                 height: 100%;
-                                padding: 3.5cm 2.5cm 2.5cm 2.5cm; /* Margins: Top space for Header Logo */
+                                padding: 5.5cm 2.5cm 2.5cm 2.5cm; /* Margins: Top space for Header Logo */
                                 box-sizing: border-box;
                                 z-index: 1;
                             }
@@ -322,7 +354,7 @@ async function processCertificate({ studentData, courseData, certificateId, call
                     <body>
                         ${templateBase64 ? `<img src="${templateBase64}" class="bg" />` : ''}
                         ${qrCode ? `<img src="${qrCode}" class="qr-code" />` : ''}
-                        ${certificateId ? `<div class="cert-id-text">${certificateId}</div>` : ''}
+                        
                         <!-- <div class="mask"></div> -->
                         <div class="container">
                             <div class="date">${today}</div>
@@ -365,25 +397,59 @@ async function processCertificate({ studentData, courseData, certificateId, call
 
                             <div class="closing">
                                 Wish you all the best.<br><br>
-                                For any queries reach or mail the undersigned.
                             </div>
 
-                            <div class="signature-section" style="margin-top: 150px;">
-                                <div class="sign-name">
-                                    Dr. R. Karthiya Banu<br>
-                                    <span style="font-weight: normal; font-size: 11pt;">Business Head, Ph: 8667493679 | Email karthiya@inspriess.in</span>
-                                </div>
-                            </div>
+
 
                         </div>
                     </body>
                 </html>
                 `;
             } else {
-                const parts = [studentData.name];
-                if (studentData.registerNumber) parts.push(studentData.registerNumber);
-                if (studentData.year) parts.push(studentData.year);
-                const line1Text = parts.join(' - ');
+                // --- STANDARDIZED CERTIFICATE OVERLAY SYSTEM ---
+                // FIXED ZONES (Immutable positions)
+                // A4 Landscape is approx 1123px x 794px (at 96 DPI) or just use % for flexibility
+
+                const NAME_POSITION = {
+                    top: '38%',     // Moved UP from 42%
+                    left: '10%',
+                    width: '80%',
+                    fontSize: '40px', // slightly smaller might help too if name is long, but pos is key
+                    fontFamily: "'Times New Roman', serif"
+                };
+
+                const LINE2_POSITION = {
+                    top: '48%',     // Moved UP from 56% to clear the static text below
+                    left: '15%',
+                    width: '70%',
+                    fontSize: '20px', // Slightly smaller
+                    fontFamily: "'Helvetica', sans-serif"
+                };
+
+                const QR_POSITION = {
+                    top: '30px',
+                    right: '30px',
+                    size: '110px'
+                };
+
+                const CERT_ID_POSITION = {
+                    top: '145px',       // Immediately below QR
+                    right: '30px',      // Aligned with QR 'right'
+                    width: '110px',     // Same width as QR
+                    fontSize: '11px',
+                    fontFamily: "'Courier New', monospace"
+                };
+
+                // Logic for content
+                // Line 1: Name + Register Number
+                // "IN FIRST LINE NAME & REGISTER NUMBER"
+                const line1Text = [
+                    studentData.name,
+                    studentData.registerNumber ? `(${studentData.registerNumber})` : null
+                ].filter(Boolean).join(' ');
+
+                // Line 2: College Name
+                // "IN SECOND LINE COLLEGE NAME"
                 const line2Text = studentData.institutionName || '';
 
                 htmlContent = `
@@ -391,70 +457,124 @@ async function processCertificate({ studentData, courseData, certificateId, call
                     <head>
                         <style>
                             @page { size: A4 landscape; margin: 0; }
-                            body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; position: relative; font-family: 'Helvetica', sans-serif; }
-                            .bg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: -1; object-fit: cover; }
-                            .line1-container { position: absolute; top: 38%; left: 10%; width: 80%; text-align: center; }
-                            .line1 { font-size: 28px; font-weight: bold; color: #000; text-transform: uppercase; font-family: 'Times New Roman', serif; }
-                            .line2-container { position: absolute; top: 48%; left: 10%; width: 80%; text-align: center; }
-                            .line2 { font-size: 24px; color: #333; font-weight: bold; text-transform: uppercase; font-family: 'Times New Roman', serif; }
+                            body { 
+                                margin: 0; 
+                                padding: 0; 
+                                width: 100vw; 
+                                height: 100vh; 
+                                border: none; /* No border to avoid offsets */
+                                overflow: hidden; 
+                                position: relative; 
+                            }
+                            
+                            /* BACKGROUND LAYER */
+                            .bg { 
+                                width: 100%; 
+                                height: 100%; 
+                                position: absolute; 
+                                top: 0; 
+                                left: 0; 
+                                z-index: -1; 
+                                object-fit: cover; 
+                            }
+
+                            /* NAME LAYER */
+                            .name-zone { 
+                                position: absolute; 
+                                top: ${NAME_POSITION.top}; 
+                                left: ${NAME_POSITION.left}; 
+                                width: ${NAME_POSITION.width}; 
+                                text-align: center; 
+                                font-size: ${NAME_POSITION.fontSize}; 
+                                font-weight: bold; 
+                                font-family: ${NAME_POSITION.fontFamily};
+                                text-transform: uppercase;
+                                color: #000;
+                            }
+
+                            /* SECONDARY LINE LAYER */
+                            .line2-zone { 
+                                position: absolute; 
+                                top: ${LINE2_POSITION.top}; 
+                                left: ${LINE2_POSITION.left}; 
+                                width: ${LINE2_POSITION.width}; 
+                                text-align: center; 
+                                font-size: ${LINE2_POSITION.fontSize}; 
+                                color: #333; 
+                                font-weight: bold; 
+                                font-family: ${LINE2_POSITION.fontFamily};
+                                text-transform: uppercase;
+                            }
+
+                            /* QR CODE FIXED ZONE */
                             .qr-code {
                                 position: absolute;
-                                top: 40px;
-                                right: 40px;
-                                width: 100px;
-                                height: 100px;
+                                top: ${QR_POSITION.top};
+                                right: ${QR_POSITION.right};
+                                width: ${QR_POSITION.size};
+                                height: ${QR_POSITION.size};
                                 z-index: 10;
                             }
+
+                            /* CERTIFICATE ID FIXED ZONE */
                             .cert-id-text {
                                 position: absolute;
-                                top: 145px; /* Just below QR (40 + 100 + 5) */
-                                right: 15px; /* Centered relative to QR area */
-                                width: 150px; /* Wider */
+                                top: ${CERT_ID_POSITION.top};
+                                right: ${CERT_ID_POSITION.right};
+                                width: ${CERT_ID_POSITION.width};
                                 text-align: center;
-                                font-size: 10px;
-                                font-family: 'Helvetica', sans-serif;
+                                font-size: ${CERT_ID_POSITION.fontSize};
+                                font-family: ${CERT_ID_POSITION.fontFamily};
+                                color: #000;
                                 z-index: 10;
                                 background: rgba(255,255,255,0.7);
                                 padding: 2px 0;
+                                font-weight: bold;
+                                border-radius: 4px;
                             }
                         </style>
                     </head>
                     <body>
                         ${templateBase64 ? `<img src="${templateBase64}" class="bg" />` : ''}
+                        
                         ${qrCode ? `<img src="${qrCode}" class="qr-code" />` : ''}
+                        
                         ${certificateId ? `<div class="cert-id-text">${certificateId}</div>` : ''}
-                        <div class="line1-container"><div class="line1">${line1Text}</div></div>
-                        <div class="line2-container"><div class="line2">${line2Text}</div></div>
+                        
+                        <div class="name-zone">${line1Text}</div>
+                        <div class="line2-zone">${line2Text}</div>
                     </body>
                 </html>
                 `;
             }
         }
 
-        const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
-        const page = await browser.newPage();
-        await page.setContent(htmlContent);
+        if (htmlContent) {
+            const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox'] });
+            const page = await browser.newPage();
+            await page.setContent(htmlContent);
 
-        await page.pdf({
-            path: filePath,
-            format: 'A4',
-            landscape: !isOfferLetter && !isDocx,
-            printBackground: true,
-            margin: isDocx ? { top: '2cm', bottom: '2cm', left: '2cm', right: '2cm' } : undefined
-        });
+            await page.pdf({
+                path: filePath,
+                format: 'A4',
+                landscape: !isOfferLetter && !isDocx,
+                printBackground: true,
+                margin: isDocx ? { top: '2cm', bottom: '2cm', left: '2cm', right: '2cm' } : undefined
+            });
 
-        await browser.close();
-        console.log(`[Generated] PDF created at ${filePath}`);
+            await browser.close();
+            console.log(`[Generated] PDF created at ${filePath}`);
+        }
 
         const mailOptions = {
             from: process.env.EMAIL_FROM || '"EdinzTech Cert" <noreply@edinztech.com>',
             to: studentData.email,
-            subject: isOfferLetter ? `Your Offer Letter: ${courseData.title}` : `Your Certificate: ${courseData.title}`,
+            subject: isOfferLetter ? `Your Internship Offer Letter: ${courseData.title}` : `Your Certificate: ${courseData.title}`,
             text: isOfferLetter
-                ? `Dear ${studentData.name},\n\nPlease find your Internship Offer Letter attached.\n\nBest,\nEdinzTech Team`
-                : `Congratulations ${studentData.name}!\n\nPlease find your certificate attached.\n\nBest,\nEdinzTech Team`,
+                ? `Dear ${studentData.name},\n\nWe are pleased to share your Internship Offer Letter.\n\nPlease find the document attached.\n\nBest Regards,\nEdinzTech Team`
+                : `Congratulations ${studentData.name}!\n\nPlease find your certificate attached.\n\nBest Regards,\nEdinzTech Team`,
             attachments: [{
-                filename: `${isOfferLetter ? 'OfferLetter' : 'Certificate'}_${studentData.name.replace(/\s/g, '_')}.pdf`,
+                filename: `${isOfferLetter ? 'Offer_Letter' : 'Certificate'}_${studentData.name.replace(/\s/g, '_')}.pdf`,
                 path: filePath
             }]
         };
@@ -464,23 +584,24 @@ async function processCertificate({ studentData, courseData, certificateId, call
 
         const downloadUrl = `${process.env.SERVICE_URL || `http://72.60.103.246:${PORT}`}/files/${certificateId}.pdf`;
 
-        await axios.post(callbackUrl, {
-            certificateId,
-            status: 'sent',
-            metadata: {
-                messageId: info.messageId,
-                generatedAt: new Date(),
-                email: studentData.email,
-                fileUrl: downloadUrl
-            }
-        });
-        console.log(`[Callback] Success reported to ${callbackUrl}`);
-
-    } catch (error) {
-        console.error(`[Error] Processing failed for ${certificateId}:`, error);
         try {
-            await axios.post(callbackUrl, { certificateId, status: 'failed', error: error.message });
-        } catch (cbError) { console.error('[Error] Callback failed:', cbError.message); }
+            await axios.post(callbackUrl, {
+                certificateId,
+                status: 'sent',
+                metadata: {
+                    messageId: info.messageId,
+                    generatedAt: new Date(),
+                    email: studentData.email,
+                    fileUrl: downloadUrl
+                }
+            });
+            console.log(`[Callback] Success reported to ${callbackUrl}`);
+        } catch (cbErr) {
+            console.warn(`[Callback Warning] Failed to report status to ${callbackUrl}:`, cbErr.message);
+            // Do NOT throw error here, as email is already sent and generation is successful.
+        }
+
+
     } finally {
         if (fs.existsSync(filePath)) {
             // fs.unlinkSync(filePath);

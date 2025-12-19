@@ -11,7 +11,7 @@ const doc = new Document({
                 alignment: AlignmentType.RIGHT,
                 children: [
                     new TextRun({
-                        text: "{{today}}",
+                        text: "[%today%]",
                         bold: true,
                         font: "Times New Roman"
                     })
@@ -25,16 +25,21 @@ const doc = new Document({
             }),
             new Paragraph({ text: "" }),
             new Paragraph({
-                children: [new TextRun({ text: "   {{name}}", font: "Times New Roman", bold: true, size: 24 })]
+                children: [new TextRun({ text: "   [%name%]", font: "Times New Roman", size: 24 })]
             }),
             new Paragraph({
-                children: [new TextRun({ text: "   {{registerNumber}}", font: "Times New Roman", bold: true, size: 24 })]
+                children: [new TextRun({ text: "   [%registerNumber%]", font: "Times New Roman", size: 24 })]
             }),
             new Paragraph({
-                children: [new TextRun({ text: "   {{year}} & {{department}}", font: "Times New Roman", bold: true, size: 24 })]
+                children: [
+                    new TextRun({ text: "   ", font: "Times New Roman", size: 24 }),
+                    new TextRun({ text: "[%year%]", font: "Times New Roman", size: 24 }),
+                    new TextRun({ text: " & ", font: "Times New Roman", bold: true, size: 24 }),
+                    new TextRun({ text: "[%department%]", font: "Times New Roman", size: 24 })
+                ]
             }),
             new Paragraph({
-                children: [new TextRun({ text: "   {{institutionName}}", font: "Times New Roman", bold: true, size: 24 })]
+                children: [new TextRun({ text: "   [%institutionName%]", font: "Times New Roman", size: 24 })]
             }),
             new Paragraph({ text: "" }),
             new Paragraph({ text: "" }),
@@ -58,7 +63,7 @@ const doc = new Document({
             new Paragraph({
                 children: [
                     new TextRun({ text: "Dear ", font: "Times New Roman", size: 24 }),
-                    new TextRun({ text: "{{name}}", font: "Times New Roman", bold: true, size: 24 }),
+                    new TextRun({ text: "[%name%]", font: "Times New Roman", bold: true, size: 24 }),
                     new TextRun({ text: ",", font: "Times New Roman", size: 24 })
                 ]
             }),
@@ -75,8 +80,7 @@ const doc = new Document({
                         size: 24
                     }),
                     new TextRun({
-                        text: "“BUSINESS INTELLIGENCE & DATA SCIENCE FOUNDATIONS: EXCEL TO AI”",
-                        bold: true,
+                        text: "[%title%]",
                         font: "Times New Roman",
                         size: 24
                     }),
@@ -99,13 +103,13 @@ const doc = new Document({
             new Paragraph({
                 children: [
                     new TextRun({ text: "Start Date:          ", font: "Times New Roman", size: 24 }),
-                    new TextRun({ text: "{{startDate}}", font: "Times New Roman", bold: true, size: 24 })
+                    new TextRun({ text: "[%startDate%]", font: "Times New Roman", size: 24 })
                 ]
             }),
             new Paragraph({
                 children: [
                     new TextRun({ text: "End Date:            ", font: "Times New Roman", size: 24 }),
-                    new TextRun({ text: "{{endDate}}", font: "Times New Roman", bold: true, size: 24 })
+                    new TextRun({ text: "[%endDate%]", font: "Times New Roman", size: 24 })
                 ]
             }),
             new Paragraph({ text: "" }),
@@ -137,16 +141,20 @@ const doc = new Document({
     }],
 });
 
-// Save to server/uploads
-// Ensure dir exists
+// Save to server/uploads AND certificate-service/templates
 const uploadDir = path.join(__dirname, "..", "server", "uploads");
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const templateDir = path.join(__dirname, "templates");
 
-const filePath = path.join(uploadDir, "clean_offer_letter.docx");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(templateDir)) fs.mkdirSync(templateDir, { recursive: true });
+
+const filePathUploads = path.join(uploadDir, "clean_offer_letter.docx");
+const filePathTemplate = path.join(templateDir, "offer-letter.docx");
 
 Packer.toBuffer(doc).then((buffer) => {
-    fs.writeFileSync(filePath, buffer);
-    console.log("Generated Clean Template at:", filePath);
+    fs.writeFileSync(filePathUploads, buffer);
+    fs.writeFileSync(filePathTemplate, buffer);
+    console.log("Generated Clean Template at:");
+    console.log("1. " + filePathUploads);
+    console.log("2. " + filePathTemplate);
 });

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAdminEnrollments, getStudentCredentials, resendStudentCredentials, exportEnrollments, updateStudentDetails } from '../lib/api'; // Updated import
+import { getAdminEnrollments, getStudentCredentials, resendStudentCredentials, exportEnrollments, updateStudentDetails, regenerateCertificate } from '../lib/api'; // Updated import
 import { Icons } from '../components/icons';
 import Card from '../components/ui/Card';
 
@@ -12,6 +12,17 @@ export default function AdminEnrollments() {
     const [selectedStudent, setSelectedStudent] = useState(null); // For credentials modal
     const [editingStudent, setEditingStudent] = useState(null); // For edit modal
     const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+
+    const handleResendCertificate = async (enrollmentId) => {
+        if (!window.confirm("Are you sure you want to regenerate and resend this certificate?")) return;
+        try {
+            await regenerateCertificate(enrollmentId);
+            alert("Certificate resent successfully!");
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.message || "Failed to resend");
+        }
+    };
 
     const [adminPassword, setAdminPassword] = useState('');
     const [credentials, setCredentials] = useState(null);
@@ -156,6 +167,8 @@ export default function AdminEnrollments() {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cert Status</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cert ID</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -166,54 +179,82 @@ export default function AdminEnrollments() {
                         ) : enrollments.length === 0 ? (
                             <tr><td colSpan="9" className="text-center py-4">No enrollments found.</td></tr>
                         ) : (
-                            enrollments.map((enrollment) => (
-                                <tr key={enrollment._id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {enrollment.userCode || 'N/A'}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                        {enrollment.studentName}
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        <div>{enrollment.email}</div>
-                                        <div className="text-xs">{enrollment.phone}</div>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">
-                                        {enrollment.programName}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            enrollments.map((enrollment, index) => {
+                                if (index === 0) console.log('DEBUG FRONTEND:', enrollment);
+                                return (
+                                    <tr key={enrollment._id}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                            {enrollment.userCode || 'N/A'}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                            {enrollment.studentName}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            <div>{enrollment.email}</div>
+                                            <div className="text-xs">{enrollment.phone}</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            {enrollment.programName}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
                                             ${enrollment.programType === 'Internship' ? 'bg-purple-100 text-purple-800' :
-                                                enrollment.programType === 'Workshop' ? 'bg-orange-100 text-orange-800' :
-                                                    'bg-blue-100 text-blue-800'}`}>
-                                            {enrollment.programType}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {enrollment.amount}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <span className="capitalize">{enrollment.status}</span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
-                                        <button
-                                            onClick={() => handleViewCredentials(enrollment)}
-                                            className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded"
-                                        >
-                                            View Credentials
-                                        </button>
-                                        <button
-                                            onClick={() => handleEditStudent(enrollment)}
-                                            className="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded"
-                                        >
-                                            Edit
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))
+                                                    enrollment.programType === 'Workshop' ? 'bg-orange-100 text-orange-800' :
+                                                        'bg-blue-100 text-blue-800'}`}>
+                                                {enrollment.programType}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {enrollment.amount}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className="capitalize">{enrollment.status}</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${enrollment.certificateStatus === 'PUBLISHED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                {enrollment.certificateStatus === 'PUBLISHED' ? 'Published' : 'Yet to Publish'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                            {enrollment.certificateStatus === 'PUBLISHED' ? (
+                                                <span
+                                                    className="cursor-pointer hover:bg-gray-100 px-1 rounded"
+                                                    onClick={() => navigator.clipboard.writeText(enrollment.certificateId)}
+                                                    title="Click to copy"
+                                                >
+                                                    {enrollment.certificateId}
+                                                </span>
+                                            ) : '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                                            <button
+                                                onClick={() => handleViewCredentials(enrollment)}
+                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded"
+                                            >
+                                                View Credentials
+                                            </button>
+                                            <button
+                                                onClick={() => handleEditStudent(enrollment)}
+                                                className="text-blue-600 hover:text-blue-900 bg-blue-50 px-3 py-1 rounded"
+                                            >
+                                                Edit
+                                            </button>
+                                            {enrollment.certificateStatus === 'PUBLISHED' && (
+                                                <button
+                                                    onClick={() => handleResendCertificate(enrollment._id)}
+                                                    className="text-purple-600 hover:text-purple-900 bg-purple-50 px-3 py-1 rounded"
+                                                    title="Re-Generate PDF & Resend Email"
+                                                >
+                                                    Re-Send
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         )}
                     </tbody>
                 </table>

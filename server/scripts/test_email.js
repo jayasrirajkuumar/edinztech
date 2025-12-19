@@ -1,28 +1,29 @@
 const nodemailer = require('nodemailer');
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env') }); // Explicit absolute-ish path from script location
+require('dotenv').config({ path: '../.env' }); // Load server .env
 
 const sendTestEmail = async () => {
-    console.log("Testing Email Service...");
-    console.log(`User: ${process.env.EMAIL_USER}`);
-    console.log(`Pass: ${process.env.EMAIL_PASS ? '******' : 'MISSING'}`);
-
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-
     try {
+        console.log("Checking credentials...");
+        console.log("Service:", process.env.EMAIL_SERVICE);
+        console.log("User:", process.env.EMAIL_USER);
+
+        const transporter = nodemailer.createTransport({
+            service: process.env.EMAIL_SERVICE,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+        });
+
+        console.log("Sending email...");
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: process.env.EMAIL_USER, // Send to self
-            subject: 'Test Email from EdinzTech',
-            text: 'If you see this, the email service is working!',
+            subject: "Test Email from Debug Script",
+            text: "If you see this, email service is working."
         });
-        console.log("Email Sent Successfully!", info.messageId);
+
+        console.log("Success! Message ID:", info.messageId);
     } catch (error) {
         console.error("Email Failed:", error);
     }

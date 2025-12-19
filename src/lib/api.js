@@ -326,8 +326,13 @@ export const publishCertificates = async (programId) => {
     return data;
 };
 
-export const publishOfferLetters = async (programId) => {
-    const { data } = await api.post(`/admin/programs/${programId}/publish-offer-letters`);
+export const publishOfferLetters = async (programId, force = false) => {
+    const { data } = await api.post(`/admin/programs/${programId}/publish-offer-letters?force=${force}`);
+    return data;
+};
+
+export const regenerateCertificate = async (enrollmentId) => {
+    const { data } = await api.post(`/certificates/regenerate/${enrollmentId}`);
     return data;
 };
 

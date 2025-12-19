@@ -32,7 +32,25 @@ const getPrograms = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
-                enrolledCount: { $size: '$enrollmentsData' }
+                enrolledCount: { $size: '$enrollmentsData' },
+                publishedCertificatesCount: {
+                    $size: {
+                        $filter: {
+                            input: '$enrollmentsData',
+                            as: 'e',
+                            cond: { $eq: ['$$e.certificateStatus', 'PUBLISHED'] }
+                        }
+                    }
+                },
+                issuedOfferLettersCount: {
+                    $size: {
+                        $filter: {
+                            input: '$enrollmentsData',
+                            as: 'e',
+                            cond: { $eq: ['$$e.offerLetterStatus', 'ISSUED'] }
+                        }
+                    }
+                }
             }
         },
         {

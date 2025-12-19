@@ -125,7 +125,7 @@ const inviteStudent = async (req, res) => {
 const getEnrollments = async (req, res) => {
     try {
         console.log('[DEBUG] getEnrollments called'); // Debug Log
-        const { type, programId, search } = req.query;
+        const { type, programId, search, source } = req.query;
 
         let query = {};
 
@@ -139,6 +139,11 @@ const getEnrollments = async (req, res) => {
             query.programId = programId;
         }
 
+        // Filter by Source (e.g. 'invite' vs 'web')
+        if (source) {
+            query.source = source;
+        }
+
         console.log('[DEBUG] Query:', query); // Debug Log
 
         // Fetch Enrollments with populated data
@@ -148,6 +153,14 @@ const getEnrollments = async (req, res) => {
             .populate('program', 'title type fee')
             .populate('paymentId', 'amount status')
             .sort({ createdAt: -1 });
+
+        // DEBUG: Write to file to check what the server sees
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const debugLine = `[${new Date().toISOString()}] First Enrollment CertStatus: ${enrollments[0]?.certificateStatus} | ID: ${enrollments[0]?.certificateId}\n`;
+            fs.writeFileSync(path.join(__dirname, '../debug_api_response.txt'), debugLine);
+        } catch (e) { console.error(e); }
 
         console.log(`[DEBUG] Found ${enrollments.length} enrollments`); // Debug Log
 
@@ -207,6 +220,8 @@ const getEnrollments = async (req, res) => {
             programType: e.programType || e.program?.type || 'N/A',
             amount: e.paymentId?.amount ? `₹${e.paymentId.amount}` : (e.program?.fee ? `₹${e.program.fee}` : 'Free'),
             status: e.paymentId?.status || 'Active', // Fallback
+            certificateStatus: e.certificateStatus || 'NOT_PUBLISHED',
+            certificateId: e.certificateId || '-',
             enrolledAt: e.enrolledAt
         }));
 
@@ -341,7 +356,7 @@ const exportEnrollments = async (req, res) => {
         }
 
         // Generate CSV
-        let csv = 'Student Name,Email,Phone,Institution,Department,Year,Register No,City,State,Pincode,User Code,Program,Type,Amount,Status,Enrolled Date\n';
+        let csv = 'Student Name,Email,Phone,Institution,Department,Year,Register No,City,State,Pincode,User Code,Program,Type,Amount,Status,Enrolled Date,Certificate Status,Certificate ID,Issued Date\n';
 
         results.forEach(e => {
             const row = [
@@ -360,7 +375,10 @@ const exportEnrollments = async (req, res) => {
                 e.program?.type || 'N/A',
                 e.paymentId?.amount || e.program?.fee || '0',
                 e.paymentId?.status || 'Active',
-                e.enrolledAt ? new Date(e.enrolledAt).toISOString().split('T')[0] : ''
+                e.enrolledAt ? new Date(e.enrolledAt).toISOString().split('T')[0] : '',
+                `"${e.certificateStatus || 'NOT_PUBLISHED'}"`,
+                `"${e.certificateId || ''}"`,
+                e.certificateIssuedAt ? new Date(e.certificateIssuedAt).toISOString().split('T')[0] : ''
             ];
             csv += row.join(',') + '\n';
         });
