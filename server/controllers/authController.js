@@ -19,6 +19,10 @@ const authUser = asyncHandler(async (req, res) => {
             // For safety, let's allow but maybe warn in logs. 
         }
 
+        // Update Last Login
+        user.lastLoginAt = Date.now();
+        await user.save();
+
         res.json({
             _id: user._id,
             name: user.name,
@@ -44,6 +48,10 @@ const authAdmin = asyncHandler(async (req, res) => {
             res.status(401);
             throw new Error('Not authorized as admin');
         }
+
+        // Update Last Login
+        user.lastLoginAt = Date.now();
+        await user.save();
 
         res.json({
             _id: user._id,

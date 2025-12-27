@@ -3,10 +3,13 @@ import {
     AlertCircle,
     Info,
     Upload,
+    History, // Added
     BookOpen,
     Briefcase,
     Users,
     Home,
+    Shield, // Added
+    QrCode, // Added
     ShieldCheck,
     LogIn,
     LogOut,
@@ -36,10 +39,10 @@ import {
     Settings, // Added for ProgramForm
     FileText, // Added
     ArrowLeft, // Added
-    Shield, // Added
-    QrCode, // Added
-    XCircle, // Added
-    History, // Added for Legacy Verify Section
+    Phone, // Added
+    Presentation, // Added
+    GraduationCap, // Added
+    FolderKanban, // Added
 } from 'lucide-react';
 
 export const Icons = {
@@ -51,14 +54,18 @@ export const Icons = {
     QrCode: (props) => <QrCode className="text-secondary" {...props} />, // Added
     Home: (props) => <Home className="text-secondary" {...props} />,
     BookOpen: (props) => <BookOpen className="text-secondary" {...props} />, // Added for generic usage
+    Learning: (props) => <GraduationCap className="text-secondary" {...props} />, // Added for Learning Programs
+    Project: (props) => <FolderKanban className="text-secondary" {...props} />, // Added for Projects
     Courses: (props) => <BookOpen className="text-secondary" {...props} />,
     Internships: (props) => <Briefcase className="text-secondary" {...props} />,
-    Workshops: (props) => <Users className="text-secondary" {...props} />,
+    Workshops: (props) => <Presentation className="text-secondary" {...props} />,
     Users: (props) => <Users className="text-secondary" {...props} />,
     Verify: (props) => <ShieldCheck className="text-secondary" {...props} />,
     Login: (props) => <LogIn className="text-secondary" {...props} />,
     Logout: (props) => <LogOut className="text-secondary" {...props} />,
     LogOut: (props) => <LogOut className="text-secondary" {...props} />, // Added alias
+    Code: (props) => <Code className="text-primary" {...props} />, // Added
+    Contact: (props) => <Phone className="text-secondary" {...props} />, // Added
 
     // UI Controls
     Menu: (props) => <Menu className="text-primary" {...props} />,
@@ -104,4 +111,6 @@ export const Icons = {
     Clock: (props) => <Clock className="text-primary" {...props} />, // Added generic Clock
     FileText: (props) => <FileText className="text-secondary" {...props} />, // Added
     ArrowLeft: (props) => <ArrowLeft className="text-secondary" {...props} />, // Added
+    GraduationCap: (props) => <GraduationCap className="text-secondary" {...props} />, // Added
+    Presentation: (props) => <Presentation className="text-secondary" {...props} />, // Added
 };

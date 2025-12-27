@@ -395,64 +395,154 @@ const exportEnrollments = async (req, res) => {
 
 
 
+const Certificate = require('../models/Certificate');
+const Quiz = require('../models/Quiz');
+// const FeedbackResponse = require('../models/FeedbackResponse'); // Assuming model exists, if not use fallback or generic count
+
 const getDashboardStats = async (req, res) => {
     try {
-        console.log('[DEBUG] getDashboardStats called');
-        // 1. Total Students
-        const totalStudents = await User.countDocuments({ role: 'student' });
-        console.log(`[DEBUG] Students: ${totalStudents}`);
-
-        // 2. Active Programs
-        const activePrograms = await Program.countDocuments({ isArchived: false });
-        console.log(`[DEBUG] Programs: ${activePrograms}`);
-
-        // 3. Revenue Breakdown
         const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay()); // Start of week (Sunday)
-        startOfWeek.setHours(0, 0, 0, 0);
+        // 1. Program Queries
+        // Fetch all active programs to compute derived status in memory or via basic date queries
+        const allPrograms = await Program.find({ isArchived: false }).select('_id type startDate endDate');
 
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        // Derived Metrics
+        let activePrograms = 0;
+        let upcomingPrograms = 0;
+        let completedPrograms = 0;
 
-        const revenueStats = await Payment.aggregate([
-            { $match: { status: 'captured' } },
-            {
-                $group: {
-                    _id: null,
-                    total: { $sum: '$amount' },
-                    today: {
-                        $sum: {
-                            $cond: [{ $gte: ['$createdAt', startOfToday] }, '$amount', 0]
-                        }
-                    },
-                    week: {
-                        $sum: {
-                            $cond: [{ $gte: ['$createdAt', startOfWeek] }, '$amount', 0]
-                        }
-                    },
-                    month: {
-                        $sum: {
-                            $cond: [{ $gte: ['$createdAt', startOfMonth] }, '$amount', 0]
-                        }
-                    }
-                }
+        let coursesCount = 0;
+        let workshopsCount = 0;
+        let internshipsCount = 0;
+        let internshipsActive = 0;
+        let internshipsUpcoming = 0;
+        let internshipsCompleted = 0;
+
+        const activeProgramIds = [];
+
+        allPrograms.forEach(p => {
+            const start = new Date(p.startDate);
+            const end = new Date(p.endDate);
+            const isUpcoming = now < start;
+            const isOngoing = now >= start && now <= end;
+            const isCompleted = now > end;
+
+            // Global Counts
+            if (isUpcoming || isOngoing) {
+                activePrograms++;
+                activeProgramIds.push(p._id);
+            } else if (isCompleted) {
+                completedPrograms++;
             }
-        ]);
+            if (isUpcoming) upcomingPrograms++;
 
-        const revenueData = revenueStats.length > 0 ? revenueStats[0] : { total: 0, today: 0, week: 0, month: 0 };
-        console.log(`[DEBUG] Revenue:`, revenueData);
-
-        // 4. Pending Verifications
-        const pendingVerifications = 0;
-
-        res.json({
-            totalStudents,
-            activePrograms,
-            revenue: revenueData,
-            pendingVerifications
+            // Type Counts
+            if (p.type === 'Course') coursesCount++;
+            if (p.type === 'Workshop') workshopsCount++;
+            if (p.type === 'Internship') {
+                internshipsCount++;
+                if (isUpcoming || isOngoing) internshipsActive++;
+                if (isUpcoming) internshipsUpcoming++;
+                if (isCompleted) internshipsCompleted++;
+            }
         });
+
+        // 2. Student Metrics
+        const totalStudents = await User.countDocuments({ role: 'student' });
+        const invitedStudents = await User.countDocuments({ role: 'student', lastLoginAt: null });
+
+        // Enrolled: Unique students in currently ACTIVE programs (using strict ID list)
+        // This is "Active Students" who are currently learning
+        const activeEnrolledIds = await Enrollment.distinct('user', {
+            status: 'active',
+            program: { $in: activeProgramIds }
+        });
+        const activeStudents = activeEnrolledIds.length;
+
+        // Total Students Ever Enrolled (Lifetime) - derived or just use totalStudents?
+        // User asked for "Total Internship Students" and "Active Internship Students"
+
+        // Let's get "Total Enrolled" (Lifetime) vs "Active Enrolled" (Currently in ongoing program)
+        // const totalEnrolledIds = await Enrollment.distinct('user', { status: 'active' }); 
+
+        // Internship Specific Student Counts
+        /*
+        To get "Active Internship Students", we need enrollments where program is internship AND program is active.
+        Since we have `activeProgramIds` (global), let's filter just internship IDs.
+        */
+        const activeInternshipIds = allPrograms
+            .filter(p => p.type === 'Internship' && (new Date(p.startDate) <= new Date(p.endDate) && (new Date(p.startDate) > now || (new Date(p.startDate) <= now && new Date(p.endDate) >= now)))) // Simplified: just use the memory check IDs
+            .map(p => p._id);
+
+        // Re-calculate strictly from logic above
+        const internshipIdsActive = allPrograms
+            .filter(p => p.type === 'Internship' && (
+                (now < new Date(p.startDate)) || // Upcoming is also "Active" in sense of not expired? No, usually "Active" means Learning.
+                // Requirement says: "Active Internships (Ongoing + Upcoming)"
+                // So Active Students = enrolled in Ongoing + Upcoming
+                (now >= new Date(p.startDate) && now <= new Date(p.endDate)) ||
+                (now < new Date(p.startDate))
+            ))
+            .map(p => p._id);
+
+        const internshipStudentsActiveCount = (await Enrollment.distinct('user', {
+            status: 'active',
+            program: { $in: internshipIdsActive }
+        })).length;
+
+        const internshipIdsExpired = allPrograms
+            .filter(p => p.type === 'Internship' && (now > new Date(p.endDate)))
+            .map(p => p._id);
+
+        // For "Expired Internship Students", this is tricky. 
+        // A student is "expired" if they are ONLY in expired programs and NO active ones? 
+        // Or just count of enrollments in expired programs?
+        // User request: "Expired programs must reduce student counts dynamically" -> implies "Active Count" reduces.
+        // So `internshipStudentsActiveCount` naturally handles this (it excludes expired programs).
+        // Let's just return Active Internship Students for the dashboard metric.
+
+        // 4. Engagement Metrics
+        const quizzesCreated = await Quiz.countDocuments({});
+        const pendingVerifications = await Certificate.countDocuments({ status: 'pending' });
+
+        // Feedbacks
+        let feedbacksReceived = 0;
+        try {
+            // feedbacksReceived = await FeedbackResponse.countDocuments({}); 
+            feedbacksReceived = 0;
+        } catch (e) {
+            console.log('Feedback count skipped');
+        }
+
+        // 5. Build Response
+        const stats = {
+            students: {
+                total: totalStudents,
+                invited: invitedStudents,
+                enrolled: activeStudents, // Strictly "Active Enrolled"
+                internshipActive: internshipStudentsActiveCount
+            },
+            programs: {
+                totalActive: activePrograms,
+                courses: coursesCount,
+                workshops: workshopsCount,
+                internships: {
+                    total: internshipsCount,
+                    active: internshipsActive,
+                    upcoming: internshipsUpcoming,
+                    completed: internshipsCompleted
+                }
+            },
+            engagement: {
+                pendingVerifications,
+                quizzesCreated,
+                feedbacksReceived
+            }
+        };
+
+        res.json(stats);
+
     } catch (error) {
         console.error("Dashboard Stats Error:", error);
         res.status(500).json({ message: 'Failed to fetch dashboard stats' });

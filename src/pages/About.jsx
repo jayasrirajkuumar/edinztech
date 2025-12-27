@@ -1,4 +1,5 @@
 import { Icons } from '../components/icons';
+import Team from '../components/Team';
 
 export default function About() {
     return (
@@ -56,6 +57,8 @@ export default function About() {
                     </div>
                 </div>
             </section>
+
+            <Team />
 
             {/* Core Values */}
             <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

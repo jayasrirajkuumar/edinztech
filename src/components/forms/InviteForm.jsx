@@ -22,7 +22,7 @@ const inviteSchema = z.object({
     pincode: z.string().optional(),
 });
 
-export default function InviteForm() {
+export default function InviteForm({ onSuccess }) {
     const [programs, setPrograms] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -64,6 +64,10 @@ export default function InviteForm() {
             await adminInviteStudent(data);
             setSubmitSuccess(true);
             reset();
+            // Call onSuccess callback if provided
+            if (onSuccess) {
+                onSuccess();
+            }
             // Auto hide success message after 5 seconds
             setTimeout(() => setSubmitSuccess(false), 5000);
         } catch (error) {

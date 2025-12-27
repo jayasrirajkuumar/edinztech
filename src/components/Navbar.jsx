@@ -21,8 +21,21 @@ export default function Navbar({ hideNavigation = false }) {
     const [user, setUser] = useState(null);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isMobileAboutOpen, setIsMobileAboutOpen] = useState(false);
+    const [activeDropdown, setActiveDropdown] = useState(null);
+
     const navigate = useNavigate();
     const dropdownRef = useRef(null);
+
+    // ... (keep existing useEffects)
+
+    // Scroll to top when mobile menu opens
+    useEffect(() => {
+        if (isMobileMenuOpen) {
+            window.scrollTo(0, 0);
+        }
+    }, [isMobileMenuOpen]);
+
 
     useEffect(() => {
         const checkUser = () => {
@@ -30,15 +43,16 @@ export default function Navbar({ hideNavigation = false }) {
             if (userInfoString) {
                 const userInfo = JSON.parse(userInfoString);
                 setUser(userInfo?.user || userInfo);
+            } else {
+                setUser(null);
             }
         };
 
         checkUser();
-        window.addEventListener('storage', checkUser); // Listen for storage changes
+        window.addEventListener('storage', checkUser);
         return () => window.removeEventListener('storage', checkUser);
     }, []);
 
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -57,6 +71,14 @@ export default function Navbar({ hideNavigation = false }) {
         navigate('/login');
     };
 
+    const handleMouseEnter = (name) => {
+        setActiveDropdown(name);
+    };
+
+    const handleMouseLeave = () => {
+        setActiveDropdown(null);
+    };
+
     return (
         <nav className="w-full bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
             <div className="w-full px-4 sm:px-6 lg:px-12">
@@ -73,7 +95,7 @@ export default function Navbar({ hideNavigation = false }) {
                     </div>
 
                     {/* Mobile menu button */}
-                    <div className="flex items-center md:hidden gap-4">
+                    <div className="flex items-center lg:hidden gap-4">
                         <div className="border-l border-gray-200 h-8 flex items-center pl-4">
                             <img src={inspire} alt="Inspire" className="h-10" />
                         </div>
@@ -86,16 +108,64 @@ export default function Navbar({ hideNavigation = false }) {
                     </div>
 
                     {/* Desktop Menu */}
-                    <div className="hidden md:flex gap-8 items-center">
+                    <div className="hidden lg:flex gap-5 items-center">
                         {!hideNavigation && (
                             <>
                                 <NavItem to="/" icon={Icons.Home}>Home</NavItem>
-                                <NavItem to="/about" icon={Icons.Users}>About Us</NavItem>
-                                <NavItem to="/services" icon={Icons.Rocket}>Services</NavItem>
-                                <NavItem to="/courses" icon={Icons.Courses}>Courses</NavItem>
                                 <NavItem to="/internships" icon={Icons.Internships}>Internships</NavItem>
-                                <NavItem to="/workshops" icon={Icons.Workshops}>Workshops</NavItem>
-                                <NavItem to="/contact" icon={Icons.Home}>Contact Us</NavItem>
+
+                                {/* Learning Programs Dropdown */}
+                                <div
+                                    className="relative group h-full flex items-center"
+                                    onMouseEnter={() => handleMouseEnter('learning')}
+                                    onMouseLeave={handleMouseLeave}
+                                >
+                                    <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text hover:text-primary border-b-2 border-transparent transition-all duration-200">
+                                        <Icons.Learning size={18} className="text-secondary" />
+                                        Learning Programs
+                                        <Icons.ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === 'learning' ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    <div className={`absolute top-full left-0 w-48 bg-white rounded-b-lg shadow-lg border border-gray-100 py-2 transition-all duration-200 transform origin-top ${activeDropdown === 'learning' ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 invisible'}`}>
+                                        <Link to="/workshops" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            Workshops
+                                        </Link>
+                                        <Link to="/courses" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            Courses
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                <NavItem to="/projects" icon={Icons.Project}>Projects</NavItem>
+
+                                {/* About Us Dropdown */}
+                                <div
+                                    className="relative group h-full flex items-center"
+                                    onMouseEnter={() => handleMouseEnter('about')}
+                                    onMouseLeave={handleMouseLeave}
+                                >
+                                    <button className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text hover:text-primary border-b-2 border-transparent transition-all duration-200">
+                                        <Icons.Users size={18} className="text-secondary" />
+                                        About Us
+                                        <Icons.ChevronDown size={14} className={`transition-transform duration-200 ${activeDropdown === 'about' ? 'rotate-180' : ''}`} />
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    <div className={`absolute top-full left-0 w-48 bg-white rounded-b-lg shadow-lg border border-gray-100 py-2 transition-all duration-200 transform origin-top ${activeDropdown === 'about' ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 invisible'}`}>
+                                        <Link to="/about" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            About Company
+                                        </Link>
+                                        <Link to="/services" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            Services
+                                        </Link>
+                                        <Link to="/process" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary">
+                                            Our Process
+                                        </Link>
+                                    </div>
+                                </div>
+
+                                <NavItem to="/contact" icon={Icons.Contact}>Contact</NavItem>
                             </>
                         )}
 
@@ -121,7 +191,6 @@ export default function Navbar({ hideNavigation = false }) {
                                                 <p className="text-sm font-medium text-gray-900">{user.name}</p>
                                                 <p className="text-xs text-gray-500 mt-0.5">{user.email}</p>
                                                 <p className="text-xs text-gray-500 mt-0.5">ID: {user._id?.slice(-6).toUpperCase()}</p>
-                                                {user.phone && <p className="text-xs text-gray-500 mt-0.5">{user.phone}</p>}
                                             </div>
 
                                             <div className="py-1">
@@ -191,17 +260,96 @@ export default function Navbar({ hideNavigation = false }) {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="md:hidden border-t border-gray-100 bg-white">
-                    <div className="px-4 pt-2 pb-4 space-y-1 flex flex-col">
+                <div className="lg:hidden border-t border-gray-100 bg-white">
+                    <div className="px-4 pt-2 pb-4 space-y-1 flex flex-col h-[calc(100vh-80px)] overflow-y-auto">
                         {!hideNavigation ? (
                             <>
                                 <NavItem to="/" icon={Icons.Home}>Home</NavItem>
-                                <NavItem to="/about" icon={Icons.Users}>About Us</NavItem>
-                                <NavItem to="/services" icon={Icons.Rocket}>Services</NavItem>
-                                <NavItem to="/courses" icon={Icons.Courses}>Courses</NavItem>
                                 <NavItem to="/internships" icon={Icons.Internships}>Internships</NavItem>
-                                <NavItem to="/workshops" icon={Icons.Workshops}>Workshops</NavItem>
-                                <NavItem to="/contact" icon={Icons.Home}>Contact Us</NavItem>
+
+                                {/* Learning Programs Dropdown Mobile */}
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'learning' ? null : 'learning')}
+                                        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Icons.Learning size={18} className="text-secondary" />
+                                            Learning Programs
+                                        </div>
+                                        <Icons.ChevronDown
+                                            size={16}
+                                            className={`text-gray-400 transition-transform duration-200 ${activeDropdown === 'learning' ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+
+                                    <div className={`overflow-hidden transition-all duration-200 ${activeDropdown === 'learning' ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="pl-8 space-y-1 border-l-2 border-gray-100 ml-4 py-1">
+                                            <Link
+                                                to="/workshops"
+                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Workshops
+                                            </Link>
+                                            <Link
+                                                to="/courses"
+                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Courses
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <NavItem to="/projects" icon={Icons.Project}>Projects</NavItem>
+
+                                {/* Mobile About Dropdown */}
+                                <div className="space-y-1">
+                                    <button
+                                        onClick={() => setIsMobileAboutOpen(!isMobileAboutOpen)}
+                                        className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Icons.Users size={18} className="text-secondary" />
+                                            About Us
+                                        </div>
+                                        <Icons.ChevronDown
+                                            size={16}
+                                            className={`text-gray-400 transition-transform duration-200 ${isMobileAboutOpen ? 'rotate-180' : ''}`}
+                                        />
+                                    </button>
+
+                                    {/* Collapsible Content */}
+                                    <div className={`overflow-hidden transition-all duration-200 ${isMobileAboutOpen ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                        <div className="pl-8 space-y-1 border-l-2 border-gray-100 ml-4 py-1">
+                                            <Link
+                                                to="/about"
+                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                About Company
+                                            </Link>
+                                            <Link
+                                                to="/services"
+                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Services
+                                            </Link>
+                                            <Link
+                                                to="/process"
+                                                className="block px-3 py-2 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 rounded-md"
+                                                onClick={() => setIsMobileMenuOpen(false)}
+                                            >
+                                                Our Process
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <NavItem to="/contact" icon={Icons.Contact}>Contact</NavItem>
                             </>
                         ) : (
                             <button
@@ -219,7 +367,7 @@ export default function Navbar({ hideNavigation = false }) {
                             </button>
                         )}
 
-                        <div className="border-t border-gray-100 mt-2 pt-2">
+                        <div className="border-t border-gray-100 mt-2 pt-2 pb-10">
                             {user ? (
                                 <>
                                     <div className="px-3 py-2">

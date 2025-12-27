@@ -9,6 +9,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import Home from '../pages/Home';
 import About from '../pages/About';
 import Services from '../pages/Services';
+import Process from '../pages/Process';
 import Contact from '../pages/Contact';
 import Courses from '../pages/Courses';
 import CourseDetails from '../pages/CourseDetails';
@@ -19,7 +20,10 @@ import WorkshopDetails from '../pages/WorkshopDetails';
 import Verify from '../pages/Verify';
 import Login from '../pages/Login';
 import AdminLogin from '../pages/AdminLogin'; // Added
+import Projects from '../pages/Projects';
 import Success from '../pages/Success';
+import Terms from '../pages/Terms';
+import Privacy from '../pages/Privacy';
 
 // Auth Components
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -61,6 +65,8 @@ export const router = createBrowserRouter([
             { path: '/', element: <Home /> },
             { path: '/about', element: <About /> },
             { path: '/services', element: <Services /> },
+            { path: '/process', element: <Process /> },
+            { path: '/projects', element: <Projects /> },
             { path: '/contact', element: <Contact /> },
             { path: '/courses', element: <Courses /> },
             { path: '/internships', element: <Internships /> },
@@ -71,6 +77,8 @@ export const router = createBrowserRouter([
             { path: '/admin/login', element: <AdminLogin /> }, // Added
             { path: '/success', element: <Success /> },
             { path: '/certificate/view/:code', element: <CertificateView /> }, // New public route for viewing/printing
+            { path: '/terms', element: <Terms /> },
+            { path: '/privacy', element: <Privacy /> },
             { path: '*', element: <div className="p-20 text-center text-xl">Page Not Found (Custom Catch-All)</div> },
         ],
     },

@@ -4,6 +4,8 @@ import { getPrograms } from '../lib/api';
 import ProgramCard from '../components/ProgramCard';
 import Button from '../components/ui/Button';
 import { Icons } from '../components/icons';
+import Team from '../components/Team'; // Integrated Team component
+import ContactSection from '../components/ContactSection';
 
 export default function Home() {
     const [featuredPrograms, setFeaturedPrograms] = useState([]);
@@ -25,24 +27,40 @@ export default function Home() {
     return (
         <div className="space-y-16">
             {/* Hero Section */}
-            <section className="text-center py-20 space-y-8 animate-in slide-in-from-bottom-5 fade-in duration-700 bg-gradient-to-b from-white to-blue-50/50">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium text-sm">
-                    <Icons.Rocket size={16} />
-                    <span>Innovative Tech Solutions</span>
+            {/* Hero Section */}
+            <section className="relative pt-32 pb-64 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4b5563_1px,transparent_1px)] [background-size:16px_16px]"></div>
+
+                <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+                    <div className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-100 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-300 font-medium text-sm backdrop-blur-sm">
+                        <Icons.Rocket size={16} className="text-blue-400" />
+                        <span>Innovative Tech Solutions</span>
+                    </div>
+
+                    <h1 className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-200 text-5xl md:text-7xl font-extrabold tracking-tight max-w-5xl mx-auto leading-tight">
+                        Powering Business Growth Through <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">Technology</span>
+                    </h1>
+
+                    <p className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-300 text-xl text-blue-100/80 max-w-2xl mx-auto leading-relaxed">
+                        We deliver enterprise-grade software development, cloud infrastructure, and digital transformation services to help your business stay ahead.
+                    </p>
+
+                    <div className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-500 flex flex-col sm:flex-row justify-center gap-4 pt-8">
+                        <Link to="/contact">
+                            <Button size="lg" className="rounded-full px-8 py-4 text-lg w-full sm:w-auto shadow-xl !bg-blue-600 hover:!bg-blue-500 text-white border-none transition-all hover:scale-105">Get Started</Button>
+                        </Link>
+                        <Link to="/services">
+                            <Button variant="ghost" size="lg" className="rounded-full px-8 py-4 text-lg w-full sm:w-auto border border-blue-400/30 !text-white hover:!bg-blue-800/50 hover:!text-white backdrop-blur-sm transition-all hover:scale-105">Our Services</Button>
+                        </Link>
+                    </div>
                 </div>
-                <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight tracking-tight max-w-4xl mx-auto">
-                    Powering Business Growth Through <span className="text-blue-600">Technology</span>
-                </h1>
-                <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-                    We deliver enterprise-grade software development, cloud infrastructure, and digital transformation services to help your business stay ahead.
-                </p>
-                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-6">
-                    <Link to="/contact">
-                        <Button size="lg" className="rounded-full px-8 py-4 text-lg w-full sm:w-auto shadow-lg bg-blue-600 hover:bg-blue-700">Get Started</Button>
-                    </Link>
-                    <Link to="/services">
-                        <Button variant="outline" size="lg" className="rounded-full px-8 py-4 text-lg w-full sm:w-auto">Our Services</Button>
-                    </Link>
+
+                {/* Curved Bottom Divider */}
+                <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]">
+                    <svg className="relative block w-[calc(100%+1.3px)] h-[150px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" className="fill-white"></path>
+                    </svg>
                 </div>
             </section>
 
@@ -76,6 +94,8 @@ export default function Home() {
                     </div>
                 </div>
             </section>
+
+            <Team />
 
             {/* Our Services Summary */}
             <section className="bg-gray-50 py-16">
@@ -197,6 +217,8 @@ export default function Home() {
                     </div>
                 </div>
             </section>
+            {/* Contact Section */}
+            <ContactSection />
         </div>
     );
 }

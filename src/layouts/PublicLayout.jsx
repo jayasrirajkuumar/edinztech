@@ -1,8 +1,29 @@
-import { Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 
 export default function PublicLayout() {
+    const { pathname } = useLocation();
+
+    useEffect(() => {
+        // Auto-logout when visiting public pages
+        const userInfo = localStorage.getItem('userInfo');
+        if (userInfo) {
+            localStorage.removeItem('userInfo');
+            // Dispatch event to update Navbar state immediately
+            window.dispatchEvent(new Event('storage'));
+        }
+    }, []);
+
+    useEffect(() => {
+        window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'smooth'
+        });
+    }, [pathname]);
+
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
             <Navbar />

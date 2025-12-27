@@ -112,8 +112,20 @@ export default function InternshipDetails() {
                         </div>
                     </div>
 
-                    <Button onClick={handleEnroll} disabled={processing} className="w-full py-4 text-lg shadow-lg shadow-orange-100">
-                        {processing ? 'Processing...' : 'Enroll Now'}
+                    import {getRegistrationStatus} from '../lib/programUtils';
+
+                    // ... inside component ...
+                    const regStatus = program ? getRegistrationStatus(program) : 'Closed';
+                    const isRegistrationClosed = regStatus === 'Closed';
+
+                    // ... existing render logic ...
+
+                    <Button
+                        onClick={handleEnroll}
+                        disabled={processing || isRegistrationClosed}
+                        className={`w-full py-4 text-lg shadow-lg ${isRegistrationClosed ? 'bg-gray-400 cursor-not-allowed shadow-none hover:bg-gray-400' : 'shadow-orange-100'}`}
+                    >
+                        {processing ? 'Processing...' : (isRegistrationClosed ? 'Registration Closed' : 'Enroll Now')}
                     </Button>
                     <p className="text-xs text-center text-gray-400 mt-4">30-day money-back guarantee</p>
                 </Card>
